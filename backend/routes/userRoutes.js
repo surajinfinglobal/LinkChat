@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { getActiveSessions, revokeSession } = require("../controllers/userController");
 
 const protect = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
@@ -12,7 +13,8 @@ const {
   searchUserByPhone,
 } = require("../controllers/userController");
 
-
+router.get("/sessions", protect, getActiveSessions);
+router.delete("/sessions/:sessionId", protect, revokeSession);
 router.get("/privacy", protect, getPrivacySettings);
 router.put("/privacy", protect, updatePrivacySettings);
 router.put("/profile", protect, updateProfile);

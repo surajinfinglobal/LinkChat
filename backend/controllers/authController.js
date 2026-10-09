@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Session = require("../models/Session");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { getPrivacy } = require("../utils/privacy");
@@ -105,27 +106,29 @@ exports.signup = async (req, res) => {
 
 
 // for log in 
+
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check fields
     if (!email || !password) {
       return res.status(400).json({
-        message: "Email and password are required"
+        message: "Email and password are required",
       });
     }
 
-    // Find user
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+    });
 
     if (!user) {
       return res.status(401).json({
-        message: "Invalid email or password"
+        message: "Invalid email or password",
       });
     }
 
-    // Check password
     const isPasswordMatch = await bcrypt.compare(
       password,
       user.password
@@ -133,42 +136,105 @@ exports.login = async (req, res) => {
 
     if (!isPasswordMatch) {
       return res.status(401).json({
-        message: "Invalid email or password"
+        message: "Invalid email or password",
       });
     }
 
-    // Create JWT
+    if (user.status === "deactivated") {
+      return res.status(403).json({
+        message: "Account is deactivated",
+      });
+    }
+
+    // Identify the browser and operating system.
+    const userAgent = req.headers["user-agent"] || "";
+    const ua = userAgent.toLowerCase();
+
+    let browser = "Unknown browser";
+
+    if (ua.includes("edg/")) browser = "Microsoft Edge";
+    else if (ua.includes("opr/")) browser = "Opera";
+    else if (ua.includes("firefox/")) browser = "Firefox";
+    else if (ua.includes("chrome/")) browser = "Chrome";
+    else if (ua.includes("safari/")) browser = "Safari";
+
+    let os = "Unknown OS";
+
+    if (ua.includes("android")) os = "Android";
+    else if (ua.includes("iphone") || ua.includes("ipad")) os = "iOS";
+    else if (ua.includes("windows")) os = "Windows";
+    else if (ua.includes("ubuntu")) os = "Ubuntu";
+    else if (ua.includes("linux")) os = "Linux";
+    else if (ua.includes("mac os") || ua.includes("macintosh")) os = "macOS";
+
+    const device = /mobile|android|iphone|ipad/i.test(userAgent)
+      ? "Mobile device"
+      : /tablet/i.test(userAgent)
+        ? "Tablet"
+        : "Desktop";
+
+    const now = new Date();
+    const expiresAt = new Date(
+      now.getTime() + 7 * 24 * 60 * 60 * 1000
+    );
+
+    const forwardedFor = req.headers["x-forwarded-for"];
+    let clientIp = Array.isArray(forwardedFor)
+  ? forwardedFor[0]
+  : forwardedFor?.split(",")[0]?.trim() || req.ip || req.socket.remoteAddress || "";
+
+if (clientIp.startsWith("::ffff:")) {
+  clientIp = clientIp.substring(7);
+}
+
+if (clientIp === "::1") {
+  clientIp = "127.0.0.1";
+}
+    // Create a database session for this login.
+    const session = await Session.create({
+      userId: user._id,
+      device,
+      browser,
+      os,
+      ipAddress: clientIp,
+      userAgent,
+      loginAt: now,
+      lastActiveAt: now,
+      expiresAt,
+    });
+
+    // Include sessionId in the JWT.
     const token = jwt.sign(
       {
-        userId: user._id
+        userId: user._id.toString(),
+        sessionId: session._id.toString(),
       },
       process.env.JWT_SECRET,
       {
-        expiresIn: "7d"
+        expiresIn: "7d",
       }
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Login successful",
       token,
       user: {
-    id: user._id,
-    fullName: user.fullName,
-    email: user.email,
-    phoneNumber: user.phoneNumber,
-    avatar: user.avatar,
-    status: user.status,
-    lastSeen: user.lastSeen,
-    privacy: getPrivacy(user),
-    createdAt: user.createdAt
-  }
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        avatar: user.avatar,
+        status: user.status,
+        lastSeen: user.lastSeen,
+        privacy: getPrivacy(user),
+        createdAt: user.createdAt,
+      },
     });
-
   } catch (error) {
     console.error("Login error:", error);
 
-    res.status(500).json({
-      message: "Login failed"
+    return res.status(500).json({
+      message: "Login failed",
     });
   }
 };

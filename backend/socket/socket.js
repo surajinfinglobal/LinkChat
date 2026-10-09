@@ -97,6 +97,7 @@ const setupSocket = (server) => {
   io.on("connection", async (socket) => {
     const userId = socket.userId.toString();
 
+    socket.join(`session:${socket.sessionId}`);
     socket.join(`user:${userId}`);
 
 console.log(

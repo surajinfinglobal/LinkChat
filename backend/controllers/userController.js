@@ -1,9 +1,82 @@
 const User = require("../models/User");
+const Session = require("../models/Session");
+const mongoose = require("mongoose");
+const setupSocket = require("../socket/socket");
 const Conversation = require("../models/Conversation");
 const { DEFAULT_PRIVACY, getPrivacy } = require("../utils/privacy");
 const { sanitizeUserForViewer } = require("../utils/privacy");
 
 const PRIVACY_VISIBILITY_OPTIONS = ["everyone", "contacts", "nobody"];
+
+exports.getActiveSessions = async (req, res) => {
+  try {
+    const sessions = await Session.find({
+      userId: req.userId,
+      revoked: false,
+      expiresAt: { $gt: new Date() },
+    })
+      .sort({ lastActiveAt: -1 })
+      .select(
+        "device browser os ipAddress loginAt lastActiveAt createdAt"
+      )
+      .lean();
+
+    const result = sessions.map((session) => ({
+      id: session._id,
+      device: session.device,
+      browser: session.browser,
+      os: session.os,
+      ipAddress: session.ipAddress,
+      loginAt: session.loginAt,
+      lastActiveAt: session.lastActiveAt,
+      current: String(session._id) === String(req.sessionId),
+    }));
+
+    return res.status(200).json({ sessions: result });
+  } catch (error) {
+    console.error("Get active sessions error:", error);
+
+    return res.status(500).json({
+      message: "Failed to fetch active sessions",
+    });
+  }
+};
+
+exports.revokeSession = async (req, res) => {
+  const { sessionId } = req.params;
+
+  if (!mongoose.isValidObjectId(sessionId)) {
+    return res.status(400).json({ message: "Invalid session ID" });
+  }
+
+  if (String(sessionId) === String(req.sessionId)) {
+    return res.status(400).json({ message: "You cannot revoke the current session" });
+  }
+
+  try {
+    const session = await Session.findOneAndUpdate(
+      {
+        _id: sessionId,
+        userId: req.userId,
+        revoked: false,
+        expiresAt: { $gt: new Date() },
+      },
+      { $set: { revoked: true } },
+      { new: true }
+    );
+
+    if (!session) {
+      return res.status(404).json({ message: "Active session not found" });
+    }
+
+    setupSocket.io?.in(`session:${sessionId}`).disconnectSockets(true);
+
+    return res.status(200).json({ message: "Session revoked successfully" });
+  } catch (error) {
+    console.error("Revoke session error:", error);
+    return res.status(500).json({ message: "Failed to revoke session" });
+  }
+};
 
 exports.getPrivacySettings = async (req, res) => {
   try {

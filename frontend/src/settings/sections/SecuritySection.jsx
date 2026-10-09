@@ -1,13 +1,35 @@
-import { useState } from 'react';
+import { useState,useEffect  } from 'react';
 import { Lock, Eye, EyeOff, Laptop, Smartphone, Monitor, Tablet, Loader2, Check, QrCode,KeyRound,Mail,ShieldCheck,ArrowLeft } from 'lucide-react';
 
 import { Card, CardHeader, SettingRow, Divider, PageHeader } from '../components/Primitives';
 import Toggle from '../components/Toggle';
 import ConfirmModal from '../components/ConfirmModal';
 import api from "../../services/api";
-import { activeSessions as initialSessions } from '../mockSettingsData';
 
-const DEVICE_ICONS = { laptop: Laptop, phone: Smartphone, desktop: Monitor, tablet: Tablet };
+const DEVICE_ICONS = {
+  Desktop: Monitor,
+  "Mobile device": Smartphone,
+  Tablet,
+};
+
+const formatLastActive = (date) => {
+  if (!date) return "Unknown activity";
+
+  const timestamp = new Date(date).getTime();
+
+  if (Number.isNaN(timestamp)) return "Unknown activity";
+
+  const diff = Math.max(0, Date.now() - timestamp);
+  const minutes = Math.floor(diff / 60000);
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+
+  return new Date(date).toLocaleDateString();
+};
 
 export default function SecuritySection() {
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
@@ -36,9 +58,12 @@ const [resetShowConfirm, setResetShowConfirm] = useState(false);
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState('');
 
-  const [sessions, setSessions] = useState(initialSessions);
+  const [sessions, setSessions] = useState([]);
+  const [sessionsError, setSessionsError] = useState("");
+  const [sessionsLoading, setSessionsLoading] = useState(true);
   const [revokeTarget, setRevokeTarget] = useState(null);
   const [revoking, setRevoking] = useState(false);
+  const [revokeError, setRevokeError] = useState('');
 
 
   
@@ -97,6 +122,22 @@ const [resetShowConfirm, setResetShowConfirm] = useState(false);
   }
 };
 
+useEffect(() => {
+  const fetchSessions = async () => {
+    try {
+      const response = await api.get("/users/sessions");
+      setSessions(response.data.sessions || []);
+    } catch (error) {
+      setSessionsError(
+        error.response?.data?.message || "Failed to load sessions"
+      );
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  fetchSessions();
+}, []);
 
 const startForgotPassword = () => {
   setResetStep('email');
@@ -234,10 +275,19 @@ const cancelResetPassword = () => {
 
   const confirmRevoke = async () => {
     setRevoking(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setSessions((s) => s.filter((sess) => sess.id !== revokeTarget.id));
-    setRevoking(false);
-    setRevokeTarget(null);
+    setRevokeError('');
+
+    try {
+      await api.delete(`/users/sessions/${revokeTarget.id}`);
+      setSessions((s) => s.filter((sess) => sess.id !== revokeTarget.id));
+      setRevokeTarget(null);
+    } catch (error) {
+      setRevokeError(
+        error.response?.data?.message || 'Failed to revoke session. Please try again.'
+      );
+    } finally {
+      setRevoking(false);
+    }
   };
 
   return (
@@ -569,50 +619,96 @@ const cancelResetPassword = () => {
           )}
         </Card>
 
-        <Card>
-          <CardHeader title="Active sessions" description="Devices currently signed in to your account." />
-          <div className="px-2 sm:px-3 pb-3 pt-2 space-y-1">
-            {sessions.map((s) => {
-              const Icon = DEVICE_ICONS[s.icon] || Laptop;
-              return (
-                <div key={s.id} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-base-800/50 transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-base-800 border border-base-700 grid place-items-center shrink-0">
-                    <Icon size={17} className="text-base-300" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-base-100 truncate">{s.device}</p>
-                      {s.current && (
-                        <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
-                          This device
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-base-400 truncate">{s.browser} · {s.location} · {s.lastActive}</p>
-                  </div>
-                  {!s.current && (
-                    <button
-                      onClick={() => setRevokeTarget(s)}
-                      className="shrink-0 text-xs font-medium text-rose-400 hover:text-rose-300 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
-                    >
-                      Revoke
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+        
+<Card>
+  <CardHeader
+    title="Active sessions"
+    description="Devices currently signed in to your account."
+  />
+
+  <div className="px-2 sm:px-3 pb-3 pt-2 space-y-1">
+    {sessionsLoading ? (
+      <p className="px-3 py-6 text-center text-sm text-base-400">
+        Loading sessions...
+      </p>
+    ) : sessionsError ? (
+      <p className="px-3 py-6 text-center text-sm text-rose-400">
+        {sessionsError}
+      </p>
+    ) : sessions.length === 0 ? (
+      <p className="px-3 py-6 text-center text-sm text-base-400">
+        No active sessions found.
+      </p>
+    ) : (
+      sessions.map((s) => {
+        const Icon = DEVICE_ICONS[s.device] || Laptop;
+
+        return (
+          <div
+            key={s.id}
+            className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-base-800/50 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl bg-base-800 border border-base-700 grid place-items-center shrink-0">
+              <Icon size={17} className="text-base-300" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-base-100 truncate">
+                  {s.browser} on {s.os}
+                </p>
+
+                {s.current && (
+                  <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
+                    This device
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-base-400 truncate">
+                {s.device} · {s.ipAddress || "IP unavailable"} · Last active{" "}
+                {formatLastActive(s.lastActiveAt)}
+              </p>
+
+              <p className="text-xs text-base-500 mt-1">
+                Login:{" "}
+                {s.loginAt
+                  ? new Date(s.loginAt).toLocaleString()
+                  : "Unknown"}
+              </p>
+            </div>
+
+            {!s.current && (
+              <button
+                onClick={() => {
+                  setRevokeError('');
+                  setRevokeTarget(s);
+                }}
+                className="shrink-0 text-xs font-medium text-rose-400 hover:text-rose-300 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
+              >
+                Revoke
+              </button>
+            )}
           </div>
-        </Card>
+        );
+      })
+    )}
+  </div>
+</Card>
       </div>
 
       <ConfirmModal
         open={!!revokeTarget}
         title="Revoke this session?"
         description={revokeTarget ? `${revokeTarget.device} will be signed out immediately.` : ''}
+        error={revokeError}
         confirmLabel="Revoke session"
         loading={revoking}
         onConfirm={confirmRevoke}
-        onCancel={() => setRevokeTarget(null)}
+        onCancel={() => {
+          setRevokeTarget(null);
+          setRevokeError('');
+        }}
       />
     </div>
   );
