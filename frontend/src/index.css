@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.light body {
+  color-scheme: light;
+}
+
+/* Light theme overrides, toggled via .light class on <html> */
+html.light {
+  color-scheme: light;
+}
+
+html.light .bg-base-950,
+html.light [class*="bg-base-950/"] { background-color: #F3F4F7 !important; }
+html.light .bg-base-900,
+html.light [class*="bg-base-900/"] { background-color: #FFFFFF !important; }
+html.light .bg-base-850,
+html.light [class*="bg-base-850/"] { background-color: #FFFFFF !important; }
+html.light .bg-base-800,
+html.light [class*="bg-base-800/"] { background-color: #F6F7F9 !important; }
+html.light .bg-base-750,
+html.light [class*="bg-base-750/"] { background-color: #EEF0F3 !important; }
+html.light .bg-base-700,
+html.light [class*="bg-base-700/"] { background-color: #E7E9ED !important; }
+html.light .border-base-700,
+html.light [class*="border-base-700/"] { border-color: #E2E4E9 !important; }
+html.light .border-base-600,
+html.light [class*="border-base-600/"] { border-color: #E2E4E9 !important; }
+html.light .text-base-100 { color: #12151D !important; }
+html.light .text-base-200 { color: #3A3F4B !important; }
+html.light .text-base-300 { color: #6B7280 !important; }
+html.light .text-base-400 { color: #8A93A3 !important; }
+
+@keyframes blink {
+  0%, 80%, 100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+}
+
+.animate-blink {
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.mask-fade-bottom {
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+}

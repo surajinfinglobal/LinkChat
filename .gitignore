@@ -1,0 +1,9 @@
+**/.env
+**/.env.*
+**/node_modules/
+/frontend/dist/
+/chat-app/
+/backend/uploads/avatars/*
+!/backend/uploads/avatars/default.jpg
+!/backend/uploads/avatars/default2.jpg
+.DS_Store
