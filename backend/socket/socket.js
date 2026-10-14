@@ -12,10 +12,15 @@ const { invalidateCache } = require("../config/redis");
 const setupSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: "http://localhost:5173",
+      origin: [
+        "http://localhost:5173",
+        "https://link-chat-black.vercel.app",
+      ],
       methods: ["GET", "POST"],
+      credentials: true,
     },
   });
+
   setupSocket.io = io;
 
   // JWT authentication
