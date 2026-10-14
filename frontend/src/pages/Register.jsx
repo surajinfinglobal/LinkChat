@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import axios from 'axios'
 import { Mail, User, Phone, AlertCircle } from 'lucide-react'
 import AuthLayout from '../components/AuthLayout.jsx'
 import FormField from '../components/FormField.jsx'
@@ -9,6 +8,7 @@ import PasswordStrength from '../components/PasswordStrength.jsx'
 import Checkbox from '../components/Checkbox.jsx'
 import PrimaryButton from '../components/PrimaryButton.jsx'
 import { isValidEmail } from '../lib/validators.js'
+import api from '../services/api.js'
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -67,15 +67,7 @@ export default function Register() {
     setLoading(true)
 
     try {
-      const { data } = await axios.post(
-        'http://localhost:5000/api/auth/signup',
-        payload,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      )
+      const { data } = await api.post('/auth/signup', payload)
 
       console.log(data)
       setSuccess(true)

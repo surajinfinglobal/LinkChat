@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   MessageCircle,
 } from 'lucide-react';
+import { resolveServerUrl } from '../../services/api';
 
 const NAV_ITEMS = [
   { id: 'account', label: 'My Account', icon: User },
@@ -46,7 +47,7 @@ export default function SettingsSidebar({
       )}&background=0D8ABC&color=fff`;
     }
     if (a.startsWith('http') || a.startsWith('data:')) return a;
-    return `http://localhost:5000${a.startsWith('/') ? '' : '/'}${a}`;
+    return resolveServerUrl(a);
   })();
 
   return (

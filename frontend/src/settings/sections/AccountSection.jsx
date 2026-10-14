@@ -21,6 +21,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { connectedAccounts as initialAccounts } from '../mockSettingsData';
 import { useUser } from '../../context/UserContext';
 import api from '../../services/api';
+import { resolveServerUrl } from '../../services/api';
 
 export default function AccountSection() {
   const { user } = useUser();
@@ -146,7 +147,7 @@ s
   };
 
   const avatarUrl = user?.avatar
-    ? `http://localhost:5000${user.avatar}`
+    ? resolveServerUrl(user.avatar)
     : '/default-avatar.png';
 
   function formatDaysSince(isoString) {

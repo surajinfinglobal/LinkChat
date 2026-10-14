@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Video } from 'lucide-react';
 import ConversationItem from './ConversationItem';
 import { formatListTime } from '../utils/time';
+import { resolveServerUrl } from '../services/api';
 
 // TABS ko define karo — component ke bahar (constants)
 const TABS = ['All', 'Unread', 'Groups', 'Calls'];
@@ -43,7 +44,7 @@ export default function ConversationList({
             avatar: peer?.avatar
               ? peer.avatar.startsWith('http')
                 ? peer.avatar
-                : `http://localhost:5000${peer.avatar}`
+                : resolveServerUrl(peer.avatar)
               : `https://ui-avatars.com/api/?name=${encodeURIComponent(peer?.fullName || 'User')}&background=0D8ABC&color=fff`,
             lastMessageAt: call.endedAt || call.startedAt || call.createdAt,
             type: call.callType || 'voice',

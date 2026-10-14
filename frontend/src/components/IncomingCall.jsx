@@ -4,6 +4,7 @@ import {
   PhoneOff,
   Volume2,
 } from 'lucide-react';
+import { resolveServerUrl } from '../services/api';
 
 function getAvatarUrl(value, name) {
   if (!value || value === 'null' || value === 'undefined') {
@@ -16,9 +17,7 @@ function getAvatarUrl(value, name) {
     return value;
   }
 
-  return `http://localhost:5000${
-    value.startsWith('/') ? '' : '/'
-  }${value}`;
+  return resolveServerUrl(value);
 }
 
 export default function IncomingCall({

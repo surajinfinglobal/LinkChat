@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
 import { formatDateSeparator, dayKey } from '../utils/time';
+import { resolveServerUrl } from '../services/api';
 
 export default function MessageList({
   messages = [],
@@ -31,7 +32,7 @@ export default function MessageList({
   const profileAvatar = profileUser?.avatar
     ? profileUser.avatar.startsWith('http')
       ? profileUser.avatar
-      : `http://localhost:5000${profileUser.avatar}`
+      : resolveServerUrl(profileUser.avatar)
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(
         profileUser?.fullName || 'User'
       )}&background=0D8ABC&color=fff`;
@@ -95,7 +96,7 @@ export default function MessageList({
         const senderAvatar = msg.sender?.avatar
           ? msg.sender.avatar.startsWith('http')
             ? msg.sender.avatar
-            : `http://localhost:5000${msg.sender.avatar}`
+            : resolveServerUrl(msg.sender.avatar)
           : profileAvatar;
 
         const senderName =

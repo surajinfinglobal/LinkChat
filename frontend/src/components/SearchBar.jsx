@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, SquarePen } from 'lucide-react';
-import api from '../services/api';
+import api, { resolveServerUrl } from '../services/api';
 
 export default function SearchBar({ onNewConversation, onUserSelect }) {
   const [search, setSearch] = useState('');
@@ -55,7 +55,7 @@ export default function SearchBar({ onNewConversation, onUserSelect }) {
       )}&background=0D8ABC&color=fff`;
     }
     if (a.startsWith('http') || a.startsWith('data:')) return a;
-    return `http://localhost:5000${a.startsWith('/') ? '' : '/'}${a}`;
+    return resolveServerUrl(a);
   };
 
   return (

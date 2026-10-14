@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, BellOff, Bell, Search, Ban, Trash2, Link2, ChevronRight, ShieldOff } from 'lucide-react';
+import { resolveServerUrl } from '../services/api';
 import SharedMedia from './SharedMedia';
 import SharedFiles from './SharedFiles';
 import ConfirmModal from '../settings/components/ConfirmModal';
@@ -120,7 +121,7 @@ function getAvatarUrl(value, name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff`;
   }
   if (value.startsWith('http') || value.startsWith('data:')) return value;
-  return `http://localhost:5000${value.startsWith('/') ? '' : '/'}${value}`;
+  return resolveServerUrl(value);
 }
 
 function QuickAction({ icon: Icon, label, onClick, active }) {

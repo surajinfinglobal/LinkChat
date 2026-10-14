@@ -90,13 +90,12 @@ Dependencies are declared in `backend/package.json` and
 
 ## Notes for running on another machine
 
-The current frontend uses `http://localhost:5000` for API requests, sockets,
-and uploaded images, and the Socket.IO server allows `http://localhost:5173`.
-These defaults work when the browser and backend run on the same machine. For
-LAN or production deployments, update those frontend backend URLs and the
-Socket.IO allowed origin to match the address/domain where the backend and
-frontend are actually served. Ensure the backend port is reachable and configure
-HTTPS/WSS when serving the app over HTTPS.
+The frontend uses `VITE_API_URL` from `frontend/.env` as the backend origin for
+API requests, sockets, and uploaded images. Set it to the backend origin without
+an `/api` suffix. The Socket.IO server allows `http://localhost:5173` by
+default; for LAN or production deployments, update that allowed origin in
+`backend/socket/socket.js` to match the frontend domain. Ensure the backend
+port is reachable and configure HTTPS/WSS when serving the app over HTTPS.
 
 ## Troubleshooting
 

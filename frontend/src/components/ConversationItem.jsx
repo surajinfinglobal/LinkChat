@@ -1,5 +1,6 @@
 import { Pin, BellOff } from "lucide-react";
 import { formatListTime } from "../utils/time";
+import { resolveServerUrl } from "../services/api";
 
 export default function ConversationItem({
   conversation,
@@ -36,7 +37,7 @@ export default function ConversationItem({
   const avatar = otherUser.avatar
     ? otherUser.avatar.startsWith("http")
       ? otherUser.avatar
-      : `http://localhost:5000${otherUser.avatar}`
+      : resolveServerUrl(otherUser.avatar)
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(
         name
       )}&background=0D8ABC&color=fff`;

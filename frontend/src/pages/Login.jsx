@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import { Mail, AlertCircle } from 'lucide-react'
 import AuthLayout from '../components/AuthLayout.jsx'
 import FormField from '../components/FormField.jsx'
@@ -10,6 +9,7 @@ import PrimaryButton from '../components/PrimaryButton.jsx'
 import SocialButtons from '../components/SocialButtons.jsx'
 import { isValidEmail } from '../lib/validators.js'
 import { useUser } from '../context/UserContext.jsx'
+import api from '../services/api.js'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -47,14 +47,11 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const { data } = await axios.post(
-        'http://localhost:5000/api/auth/login',
+      const { data } = await api.post(
+        "/auth/login",
         {
           email: values.email.trim(),
           password: values.password,
-        },
-        {
-          headers: { 'Content-Type': 'application/json' },
         }
       )
 

@@ -3,6 +3,7 @@ import { Search, UserPlus, UserX, ShieldOff } from 'lucide-react';
 import { Card, CardHeader, PageHeader } from '../components/Primitives';
 import ConfirmModal from '../components/ConfirmModal';
 import api from '../../services/api';
+import { resolveServerUrl } from '../../services/api';
 
 export default function BlockedUsersSection() {
   const [blocked, setBlocked] = useState([]);
@@ -87,7 +88,7 @@ export default function BlockedUsersSection() {
       return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=0D8ABC&color=fff`;
     }
     if (avatar.startsWith('http') || avatar.startsWith('data:')) return avatar;
-    return `http://localhost:5000${avatar.startsWith('/') ? '' : '/'}${avatar}`;
+    return resolveServerUrl(avatar);
   };
 
   return (

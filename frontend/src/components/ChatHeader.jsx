@@ -1,4 +1,5 @@
 import { Phone, Video, Search, MoreVertical, ChevronLeft } from 'lucide-react';
+import { resolveServerUrl } from '../services/api';
 
 export default function ChatHeader({ user, conversation, onOpenInfo, onBack, onSearch,onVoiceCall,
   onVideoCall}) {
@@ -53,7 +54,7 @@ function getAvatarUrl(value, name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff`;
   }
   if (value.startsWith('http') || value.startsWith('data:')) return value;
-  return `http://localhost:5000${value.startsWith('/') ? '' : '/'}${value}`;
+  return resolveServerUrl(value);
 }
 
 function HeaderIconButton({ icon: Icon, label, onClick, className = '' }) {

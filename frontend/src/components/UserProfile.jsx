@@ -1,5 +1,6 @@
 import { Settings } from 'lucide-react';
 import { useUser } from '../context/UserContext';
+import { resolveServerUrl } from '../services/api';
 
 export default function UserProfile({ onOpenSettings }) {
   const { user, loading } = useUser();   // 👈 context se
@@ -31,7 +32,7 @@ export default function UserProfile({ onOpenSettings }) {
       return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=0D8ABC&color=fff`;
     }
     if (a.startsWith('http') || a.startsWith('data:')) return a;
-    return `http://localhost:5000${a.startsWith('/') ? '' : '/'}${a}`;
+    return resolveServerUrl(a);
   })();
 
   // 🔑 Status ke hisaab se dot color

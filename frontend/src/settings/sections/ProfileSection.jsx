@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Card, PageHeader } from '../components/Primitives';
 import api from '../../services/api';
+import { resolveServerUrl } from '../../services/api';
 import { useUser } from '../../context/UserContext';
 
 export default function ProfileSection({ onSave }) {
@@ -50,7 +51,7 @@ export default function ProfileSection({ onSave }) {
     }
 
     // relative path — server URL lagao
-    return `http://localhost:5000${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+    return resolveServerUrl(trimmed);
   }
 
   const update = (field) => (e) => {

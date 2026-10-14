@@ -27,7 +27,7 @@ import {
   sharedLinks,
 } from "./data/mockData";
 
-import api from "./services/api";
+import api, { resolveServerUrl } from "./services/api";
 import socket from "./services/socket";
 
 function normalizeMessage(message) {
@@ -38,7 +38,7 @@ function normalizeMessage(message) {
     return {
       ...(typeof image === "object" && image !== null ? image : {}),
       url: imageUrl
-        ? new URL(imageUrl, `${new URL(api.defaults.baseURL).origin}/`).toString()
+        ? resolveServerUrl(imageUrl)
         : "",
     };
   });
