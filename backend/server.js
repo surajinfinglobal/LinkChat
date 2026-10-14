@@ -19,6 +19,7 @@ const server = http.createServer(app);
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "https://link-chat-6p635edme-suravishvakarm7874.vercel.app",
   "https://link-chat-black.vercel.app",
 ];
 
