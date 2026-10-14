@@ -23,11 +23,17 @@ const allowedOrigins = [
 ];
 
 app.use(
-  cors({
+ cors({
     origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+app.options(/.*/, cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 setupSocket(server);
 
 
