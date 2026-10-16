@@ -47,6 +47,11 @@ backend in the Atlas network access settings. Use an SMTP provider's app
 password/API credential where required rather than your normal account
 password.
 
+For a deployed backend to use Redis, set `REDIS_URL` in that service's
+environment to the URL supplied by your Redis provider (usually a `rediss://`
+URL for TLS). If it is unset, the app intentionally skips caching; if Redis is
+unreachable, message reads fall back to MongoDB.
+
 The backend serves uploaded files from `backend/uploads`. Ensure this directory
 is writable by the backend process in deployments.
 
@@ -104,7 +109,13 @@ port is reachable and configure HTTPS/WSS when serving the app over HTTPS.
 - **Password-reset OTP email is not sent:** check all `SMTP_*` settings,
   provider authentication requirements, and SMTP network access.
 - **Redis connection message:** Redis is optional. Leave `REDIS_URL` unset to
-  run without Redis caching; messages will be fetched from MongoDB.
+  run without Redis caching; messages will be fetched from MongoDB. In a
+  deployment, set `REDIS_URL` on the backend service and check its startup logs
+  for `Redis is ready`.
+- **Call connects locally but not across networks:** WebRTC needs a reachable
+  TURN relay when a direct peer connection is blocked by NAT or firewall rules.
+  The current client uses Google's public STUN server only; configure a TURN
+  service for reliable calls between restrictive networks.
 - **Frontend cannot reach the backend on another device:** replace the current
   `localhost` URLs with the backend's LAN/public URL and update the Socket.IO
   allowed origin.

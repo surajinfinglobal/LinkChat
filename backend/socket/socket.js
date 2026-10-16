@@ -917,15 +917,107 @@ socket.on("end_call", async ({ callId, receiverId } = {}) => {
 });
 
 
-// ANSWER
-socket.on("webrtc_answer", ({ callId, callerId, answer } = {}) => {
+const findCallForSignal = (callId, targetUserId) => Call.findOne({
+  callId: String(callId),
+  status: { $in: ["ringing", "answered"] },
+  $or: [
+    { caller: userId, receiver: targetUserId },
+    { caller: targetUserId, receiver: userId },
+  ],
+})
+  .select("caller receiver")
+  .lean();
+
+socket.on("webrtc_offer", async ({ callId, receiverId, offer } = {}) => {
+  if (!callId || !receiverId || !offer) return;
+
+  try {
+    const call = await findCallForSignal(callId, String(receiverId));
+    if (
+      !call ||
+      String(call.caller) !== userId ||
+      String(call.receiver) !== String(receiverId)
+    ) {
+      socket.emit("call_error", {
+        callId,
+        message: "Invalid call offer",
+      });
+      return;
+    }
+
+    io.to(`user:${String(receiverId)}`).emit("webrtc_offer", {
+      callId: String(callId),
+      callerId: userId,
+      offer,
+    });
+  } catch (error) {
+    console.error("WebRTC offer forwarding error:", error);
+    socket.emit("call_error", {
+      callId,
+      message: "Unable to forward call offer",
+    });
+  }
+});
+
+socket.on(
+  "webrtc_ice_candidate",
+  async ({ callId, receiverId, candidate } = {}) => {
+    if (!callId || !receiverId || !candidate) return;
+
+    try {
+      const call = await findCallForSignal(callId, String(receiverId));
+      if (!call) {
+        socket.emit("call_error", {
+          callId,
+          message: "Invalid call ICE candidate",
+        });
+        return;
+      }
+
+      io.to(`user:${String(receiverId)}`).emit("webrtc_ice_candidate", {
+        callId: String(callId),
+        senderId: userId,
+        candidate,
+      });
+    } catch (error) {
+      console.error("WebRTC ICE candidate forwarding error:", error);
+      socket.emit("call_error", {
+        callId,
+        message: "Unable to forward ICE candidate",
+      });
+    }
+  }
+);
+
+socket.on("webrtc_answer", async ({ callId, callerId, answer } = {}) => {
   if (!callId || !callerId || !answer) return;
 
-  io.to(`user:${String(callerId)}`).emit("webrtc_answer", {
-    callId,
-    receiverId: String(userId),
-    answer,
-  });
+  try {
+    const call = await findCallForSignal(callId, String(callerId));
+    if (
+      !call ||
+      String(call.caller) !== String(callerId) ||
+      String(call.receiver) !== userId
+    ) {
+      socket.emit("call_error", {
+        callId,
+        message: "Invalid call answer",
+      });
+      return;
+    }
+
+    io.to(`user:${String(callerId)}`).emit("webrtc_answer", {
+      callId: String(callId),
+      receiverId: userId,
+      answer,
+    });
+  } catch (error) {
+    console.error("WebRTC answer forwarding error:", error);
+    socket.emit("call_error", {
+      callId,
+      message: "Unable to forward call answer",
+    });
+  }
 });
     socket.on("disconnect", async (reason) => {
       console.log(

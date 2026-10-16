@@ -141,25 +141,23 @@ export default function CallOverlay({
 
     /*
     |--------------------------------------------------------------------------
-    | Attach remote video stream
+    | Attach remote media stream
     |--------------------------------------------------------------------------
     */
     useEffect(() => {
-        if (!remoteVideoRef.current) return;
+        const mediaElement = isVideo
+            ? remoteVideoRef.current
+            : remoteAudioRef.current;
 
-        remoteVideoRef.current.srcObject = remoteStream || null;
-    }, [remoteStream]);
+        if (!mediaElement) return;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Attach remote audio stream
-    |--------------------------------------------------------------------------
-    */
-    useEffect(() => {
-        if (!remoteAudioRef.current) return;
-
-        remoteAudioRef.current.srcObject = remoteStream || null;
-    }, [remoteStream]);
+        mediaElement.srcObject = remoteStream || null;
+        if (remoteStream) {
+            mediaElement.play().catch((error) => {
+                console.warn('Remote media playback was blocked:', error);
+            });
+        }
+    }, [isVideo, remoteStream]);
 
     /*
     |--------------------------------------------------------------------------

@@ -49,10 +49,10 @@ exports.getMessages = async (req, res) => {
         message: "You are not a participant of this conversation",
       });
     }
-     // REDIS CACHE
-
+    // REDIS CACHE
     const cacheKey = `messages:${conversationId}`;
     const cachedMessages = await getCacheValue(cacheKey);
+
     let messages;
     let source = "mongodb";
 
@@ -62,12 +62,20 @@ exports.getMessages = async (req, res) => {
       source = "redis";
     } else {
       console.log(`Redis cache MISS: ${cacheKey}`);
+
       messages = await Message.find({ conversationId })
-        .populate(
-          "sender",
-          "fullName email phoneNumber avatar status lastSeen privacy"
-        )
-        .sort({ createdAt: 1 });
+        .sort({ createdAt: 1 })
+        .lean();
+
+      const cached = await setCacheValue(
+        cacheKey,
+        300,
+        JSON.stringify(messages)
+      );
+
+      if (cached) {
+        console.log(`Messages cached in Redis: ${cacheKey}`);
+      }
     }
 
     const senderIds = [...new Set(messages
@@ -113,19 +121,6 @@ exports.getMessages = async (req, res) => {
           String(deletedUserId?._id || deletedUserId) === String(req.userId)
       )
     );
-     // SAVE TO REDIS
-
-    if (!cachedMessages) {
-      const cached = await setCacheValue(
-        cacheKey,
-        300,
-        JSON.stringify(safeMessages)
-      );
-      if (cached) {
-        console.log(`Messages cached in Redis: ${cacheKey}`);
-      }
-    }
-
     return res.status(200).json({
       messages: safeMessages,
       source,

@@ -10,7 +10,7 @@ export default function useWebRTC({
 }) {
     const peerConnectionRef = useRef(null);
     const localStreamRef = useRef(null);
-
+    const remoteStreamRef = useRef(null);
     // ICE candidates received before remote description
     const pendingIceCandidatesRef = useRef([]);
 
@@ -38,15 +38,31 @@ export default function useWebRTC({
         /*
          * Remote audio/video
          */
-        peer.ontrack = (event) => {
-            const [stream] = event.streams;
+       peer.ontrack = (event) => {
+    console.log('📥 Remote track received:', event.track.kind);
 
-            if (stream) {
-                console.log('🎥 Remote stream received');
+    let stream = event.streams?.[0];
 
-                setRemoteStream(stream);
-            }
-        };
+    if (!stream) {
+        stream = remoteStreamRef.current;
+
+        if (!stream) {
+            stream = new MediaStream();
+            remoteStreamRef.current = stream;
+        }
+
+        const alreadyExists = stream
+            .getTracks()
+            .some((track) => track.id === event.track.id);
+
+        if (!alreadyExists) {
+            stream.addTrack(event.track);
+        }
+    }
+
+    remoteStreamRef.current = stream;
+    setRemoteStream(stream);
+};
 
         /*
          * ICE candidate generated
@@ -203,6 +219,13 @@ export default function useWebRTC({
         console.log('📤 Creating offer');
 
         const peer = createPeerConnection();
+        if (peer.signalingState !== 'stable') {
+    console.warn(
+        'Offer ignored; signaling state:',
+        peer.signalingState
+    );
+    return;
+}
 
         await addLocalTracks(peer);
 
@@ -235,79 +258,189 @@ export default function useWebRTC({
     /*
      * Handle Offer
      */
-    const handleOffer = useCallback(
-        async (offer) => {
-            try {
-                console.log(
-                    '📥 Offer received'
-                );
+    // const handleOffer = useCallback(
+    //     async (offer) => {
+    //         try {
+    //             console.log(
+    //                 '📥 Offer received'
+    //             );
 
-                const peer =
-                    createPeerConnection();
+    //             const peer =
+    //                 createPeerConnection();
 
-                await addLocalTracks(peer);
+    //             await addLocalTracks(peer);
 
-                await peer.setRemoteDescription(
-                    new RTCSessionDescription(offer)
-                );
+    //             await peer.setRemoteDescription(
+    //                 new RTCSessionDescription(offer)
+    //             );
 
-                /*
-                 * Remote description is now available.
-                 * Add queued ICE candidates.
-                 */
-                await flushPendingIceCandidates(
-                    peer
-                );
+    //             /*
+    //              * Remote description is now available.
+    //              * Add queued ICE candidates.
+    //              */
+    //             await flushPendingIceCandidates(
+    //                 peer
+    //             );
 
-                const answer =
-                    await peer.createAnswer();
+    //             const answer =
+    //                 await peer.createAnswer();
 
-                await peer.setLocalDescription(
-                    answer
-                );
+    //             await peer.setLocalDescription(
+    //                 answer
+    //             );
 
-                console.log(
-                    '📤 Answer created'
-                );
+    //             console.log(
+    //                 '📤 Answer created'
+    //             );
 
-                if (
-                    !socket ||
-                    !callId ||
-                    !remoteUserId
-                ) {
-                    return;
-                }
+    //             if (
+    //                 !socket ||
+    //                 !callId ||
+    //                 !remoteUserId
+    //             ) {
+    //                 return;
+    //             }
 
-                socket.emit('webrtc_answer', {
-                    callId,
-                    callerId: String(
-                        remoteUserId
-                    ),
-                    answer,
-                });
+    //             socket.emit('webrtc_answer', {
+    //                 callId,
+    //                 callerId: String(
+    //                     remoteUserId
+    //                 ),
+    //                 answer,
+    //             });
 
-                console.log(
-                    '📤 WebRTC answer sent:',
-                    callId
-                );
-            } catch (error) {
-                console.error(
-                    'Failed to handle WebRTC offer:',
-                    error
-                );
+    //             console.log(
+    //                 '📤 WebRTC answer sent:',
+    //                 callId
+    //             );
+    //         } catch (error) {
+    //             console.error(
+    //                 'Failed to handle WebRTC offer:',
+    //                 error
+    //             );
 
-                setConnectionState('failed');
+    //             setConnectionState('failed');
+    //         }
+    //     },
+    //     [
+    //         createPeerConnection,
+    //         addLocalTracks,
+    //         flushPendingIceCandidates,
+    //         socket,
+    //         callId,
+    //         remoteUserId,
+    //     ]
+    // );
+//     const handleOffer = useCallback(
+//     async (offer) => {
+//         try {
+//             console.log('📥 Offer received');
+
+//             const peer = createPeerConnection();
+
+//             await peer.setRemoteDescription(
+//                 new RTCSessionDescription(offer)
+//             );
+
+//             await flushPendingIceCandidates(peer);
+
+//             // Add microphone/camera after applying the offer
+//             await addLocalTracks(peer);
+
+//             const answer = await peer.createAnswer();
+
+//             await peer.setLocalDescription(answer);
+
+//             if (!socket || !callId || !remoteUserId) {
+//                 return;
+//             }
+
+//             socket.emit('webrtc_answer', {
+//                 callId,
+//                 callerId: String(remoteUserId),
+//                 answer,
+//             });
+
+//             console.log('📤 WebRTC answer sent:', callId);
+//         } catch (error) {
+//             console.error('Failed to handle WebRTC offer:', error);
+//             setConnectionState('failed');
+//         }
+//     },
+//     [
+//         createPeerConnection,
+//         flushPendingIceCandidates,
+//         addLocalTracks,
+//         socket,
+//         callId,
+//         remoteUserId,
+//     ]
+// );
+
+const handleOffer = useCallback(
+    async (offer) => {
+        try {
+            console.log('📥 Offer received');
+
+            if (!offer) {
+                console.error('❌ Offer is missing');
+                return;
             }
-        },
-        [
-            createPeerConnection,
-            addLocalTracks,
-            flushPendingIceCandidates,
-            socket,
-            callId,
-            remoteUserId,
-        ]
-    );
+
+            const peer = createPeerConnection();
+
+            // Apply the remote offer first
+            await peer.setRemoteDescription(
+                new RTCSessionDescription(offer)
+            );
+
+            console.log('✅ Remote offer applied');
+
+            // Add queued ICE candidates
+            await flushPendingIceCandidates(peer);
+
+            // Get microphone/camera and add local tracks
+            await addLocalTracks(peer);
+
+            // Create and apply the answer
+            const answer = await peer.createAnswer();
+
+            await peer.setLocalDescription(answer);
+
+            console.log('📤 Answer created');
+
+            if (!socket || !callId || !remoteUserId) {
+                console.error(
+                    '❌ Cannot send answer: socket, callId, or remoteUserId missing'
+                );
+                return;
+            }
+
+            socket.emit('webrtc_answer', {
+                callId,
+                callerId: String(remoteUserId),
+                answer: peer.localDescription,
+            });
+
+            console.log('📤 WebRTC answer sent:', callId);
+        } catch (error) {
+            console.error(
+                '❌ Failed to handle WebRTC offer:',
+                error
+            );
+
+            setConnectionState('failed');
+        }
+    },
+    [
+        createPeerConnection,
+        flushPendingIceCandidates,
+        addLocalTracks,
+        socket,
+        callId,
+        remoteUserId,
+    ]
+);
 
     /*
      * Handle Answer
@@ -513,44 +646,85 @@ export default function useWebRTC({
     /*
      * Cleanup
      */
-    const cleanup = useCallback(() => {
-        console.log(
-            '🧹 Cleaning WebRTC connection'
-        );
 
-        if (peerConnectionRef.current) {
-            peerConnectionRef.current.ontrack = null;
+const cleanup = useCallback(() => {
+    console.log('🧹 Cleaning WebRTC connection');
 
-            peerConnectionRef.current.onicecandidate =
-                null;
+    // 1. Close the peer connection
+    const peer = peerConnectionRef.current;
 
-            peerConnectionRef.current.onconnectionstatechange =
-                null;
+    if (peer) {
+        peer.ontrack = null;
+        peer.onicecandidate = null;
+        peer.onconnectionstatechange = null;
+        peer.oniceconnectionstatechange = null;
 
-            peerConnectionRef.current.oniceconnectionstatechange =
-                null;
+        peer.close();
+        peerConnectionRef.current = null;
+    }
 
-            peerConnectionRef.current.close();
+    // 2. Stop local microphone and camera
+    const localStream = localStreamRef.current;
 
-            peerConnectionRef.current = null;
-        }
+    if (localStream) {
+        localStream.getTracks().forEach((track) => {
+            track.stop();
+        });
 
-        if (localStreamRef.current) {
-            localStreamRef.current
-                .getTracks()
-                .forEach((track) => {
-                    track.stop();
-                });
+        localStreamRef.current = null;
+    }
 
-            localStreamRef.current = null;
-        }
+    // 3. Clear queued ICE candidates
+    pendingIceCandidatesRef.current = [];
 
-        pendingIceCandidatesRef.current = [];
+    // 4. Clear remote stream reference
+    remoteStreamRef.current = null;
 
-        setLocalStream(null);
-        setRemoteStream(null);
-        setConnectionState('closed');
-    }, []);
+    // 5. Reset React state
+    setLocalStream(null);
+    setRemoteStream(null);
+    setConnectionState('closed');
+
+    console.log('✅ WebRTC cleanup completed');
+}, []);
+
+    //     console.log(
+    //         '🧹 Cleaning WebRTC connection'
+    //     );
+
+    //     if (peerConnectionRef.current) {
+    //         peerConnectionRef.current.ontrack = null;
+
+    //         peerConnectionRef.current.onicecandidate =
+    //             null;
+
+    //         peerConnectionRef.current.onconnectionstatechange =
+    //             null;
+
+    //         peerConnectionRef.current.oniceconnectionstatechange =
+    //             null;
+
+    //         peerConnectionRef.current.close();
+
+    //         peerConnectionRef.current = null;
+    //     }
+
+    //     if (localStreamRef.current) {
+    //         localStreamRef.current
+    //             .getTracks()
+    //             .forEach((track) => {
+    //                 track.stop();
+    //             });
+
+    //         localStreamRef.current = null;
+    //     }
+
+    //     pendingIceCandidatesRef.current = [];
+
+    //     setLocalStream(null);
+    //     setRemoteStream(null);
+    //     setConnectionState('closed');
+    // }, []);
 
     /*
      * WebRTC signaling listeners
