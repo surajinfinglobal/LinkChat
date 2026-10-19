@@ -29,6 +29,16 @@ const createToken = (userId) => {
     }
   );
 };
+transporter.verify()
+  .then(() => {
+    console.log("SMTP connection successful");
+  })
+  .catch((error) => {
+    console.error("SMTP verification failed:", {
+      code: error.code,
+      message: error.message,
+    });
+  });
 
 
 
