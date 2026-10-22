@@ -1,4 +1,5 @@
 const Conversation = require("../models/Conversation");
+const Message = require("../models/Message");
 const User = require("../models/User");
 const mongoose = require("mongoose");
 const { getBlockStatuses, hideUserProfile } = require("../utils/blocking");
@@ -17,6 +18,46 @@ exports.getConversations = async (req, res) => {
         updatedAt: -1,
       });
 
+    const conversationIds = conversations.map((conversation) => conversation._id);
+    const latestMessages = conversationIds.length
+      ? await Message.aggregate([
+          {
+            $match: {
+              conversationId: { $in: conversationIds },
+              deletedFor: { $ne: new mongoose.Types.ObjectId(req.userId) },
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          {
+            $group: {
+              _id: "$conversationId",
+              message: {
+                $first: {
+                  _id: "$_id",
+                  text: "$text",
+                  sender: "$sender",
+                  createdAt: "$createdAt",
+                  messageType: "$messageType",
+                  deletedForEveryone: "$deletedForEveryone",
+                },
+              },
+            },
+          },
+        ])
+      : [];
+    const latestMessagesByConversation = new Map(
+      latestMessages.map(({ _id, message }) => [
+        String(_id),
+        {
+          ...message,
+          authorId: String(message.sender),
+          text: message.deletedForEveryone
+            ? "This message was deleted"
+            : message.text || (message.messageType === "image" ? "Photo" : ""),
+        },
+      ])
+    );
+
     const otherUserIds = conversations.flatMap((conversation) =>
       conversation.participants
         .filter((participant) => String(participant._id) !== String(req.userId))
@@ -25,6 +66,8 @@ exports.getConversations = async (req, res) => {
     const blockStatuses = await getBlockStatuses(req.userId, otherUserIds);
     const safeConversations = conversations.map((conversation) => {
       const safeConversation = conversation.toObject();
+      safeConversation.lastMessage =
+        latestMessagesByConversation.get(String(conversation._id)) || null;
       const otherParticipant = safeConversation.participants.find(
         (participant) => String(participant._id) !== String(req.userId)
       );
